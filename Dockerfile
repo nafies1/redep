@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:25.3.0-alpine
 
 # Install Docker CLI and Docker Compose plugin
 # We need these to execute docker commands from the slave
