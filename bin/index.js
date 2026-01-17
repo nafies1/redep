@@ -195,15 +195,15 @@ program
   .description('Start the server to listen for commands')
   .option('-p, --port <port>', 'Port to listen on', 3000)
   .action((options) => {
-    const port = options.port || process.env.SERVER_PORT || getConfig('server_port') || 3000;
-    const secret = process.env.SECRET_KEY || getConfig('secret_key');
+    const port = options.port || getConfig('server_port') || process.env.SERVER_PORT || 3000;
+    const secret = getConfig('secret_key') || process.env.SECRET_KEY;
     
     if (!secret) {
       logger.warn('Warning: No "secret_key" set in config or SECRET_KEY env var. Communication might be insecure or fail if client requires it.');
       logger.info('Run "redep config set secret_key <your-secret>" or set SECRET_KEY env var.');
     }
 
-    const workingDir = process.env.WORKING_DIR || getConfig('working_dir');
+    const workingDir = getConfig('working_dir') || process.env.WORKING_DIR;
     if (!workingDir) {
       logger.error('Error: "working_dir" is not set. Please set it using "redep config set working_dir <path>" or WORKING_DIR env var.');
       process.exit(1);
@@ -217,8 +217,8 @@ program
   .command('deploy <type>')
   .description('Deploy a service (e.g., "fe") to the server machine')
   .action(async (type) => {
-    const serverUrl = process.env.SERVER_URL || getConfig('server_url');
-    const secret = process.env.SECRET_KEY || getConfig('secret_key');
+    const serverUrl = getConfig('server_url') || process.env.SERVER_URL;
+    const secret = getConfig('secret_key') || process.env.SECRET_KEY;
 
     if (!serverUrl) {
       logger.error('Error: "server_url" is not set. Set SERVER_URL env var or run "redep config set server_url <url>"');
