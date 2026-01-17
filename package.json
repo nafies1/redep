@@ -31,6 +31,7 @@
     "pm2": "^6.0.14"
   },
   "devDependencies": {
+    "@sonar/scan": "^4.3.4",
     "prettier": "^3.8.0",
     "sonarqube-scanner": "^4.3.4"
   }
