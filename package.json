@@ -1,7 +1,7 @@
 {
   "name": "redep",
   "author": "nafies1",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "main": "index.js",
   "type": "module",
   "bin": {
@@ -45,7 +45,9 @@
     "helmet": "^7.1.0",
     "inquirer": "^13.2.0",
     "morgan": "^1.10.0",
-    "pm2": "^6.0.14"
+    "pm2": "^6.0.14",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@sonar/scan": "^4.3.4",
