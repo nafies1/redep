@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/redep.svg)](https://www.npmjs.com/package/redep)
 [![Docker Pulls](https://img.shields.io/docker/pulls/nafies1/redep)](https://hub.docker.com/r/nafies1/redep)
-[![License](https://img.shields.io/npm/l/redep.svg)](https://github.com/nafies1/redep/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/nafies1/redep)](https://github.com/nafies1/redep/blob/main/LICENSE)
 [![Build Status](https://github.com/nafies1/redep/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/nafies1/redep/actions)
 
 ## 📖 Project Overview
