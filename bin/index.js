@@ -5,8 +5,10 @@ import { Command } from 'commander';
 import { spawn } from 'child_process';
 import crypto from 'crypto';
 import inquirer from 'inquirer';
+import Table from 'cli-table3';
+import chalk from 'chalk';
 import { logger } from '../lib/logger.js';
-import { getConfig, setConfig, getAllConfig, clearConfig } from '../lib/config.js';
+import { getConfig, setConfig, getAllConfig, clearConfig, getDetailedConfig, getClientConfig, getServerConfig, validateMandatoryConfig, getMissingConfigMessage } from '../lib/config.js';
 import { startServer } from '../lib/server/index.js';
 import { deploy } from '../lib/client/index.js';
 import pkg from '../package.json' with { type: 'json' };
@@ -164,12 +166,182 @@ configCommand
   });
 
 configCommand
-  .command('list')
-  .description('List all configurations')
-  .action(() => {
-    const all = getAllConfig();
-    logger.info('Current Configuration:');
-    console.table(all);
+  .command('list [type]')
+  .description('List configurations (client, server, or all)')
+  .option('--json', 'Output as JSON')
+  .option('--sort <field>', 'Sort by: key, modified, source, security', 'key')
+  .action((type, options) => {
+    // Handle different list types
+    if (type === 'client') {
+      const clientConfig = getClientConfig();
+      
+      if (options.json) {
+        console.log(JSON.stringify(clientConfig, null, 2));
+        return;
+      }
+
+      if (clientConfig.length === 0) {
+        logger.warn('No client servers configured. Use "redep init client" to add servers.');
+        return;
+      }
+
+      // Create table for client config
+      const table = new Table({
+        head: ['Server', 'Host', 'Secret Key', 'Description', 'Security'],
+        style: { head: ['bold', 'white'] },
+        wordWrap: true,
+        colWidths: [15, 35, 15, 30, 12],
+      });
+
+      clientConfig.forEach((item) => {
+        let server = item.server;
+        let host = item.host;
+        let secret = item.secret_key;
+        let description = item.description;
+        let security = item.security;
+
+        // Color coding based on security
+        if (item.security === 'high') {
+          security = chalk.green(security);
+          server = chalk.green(server);
+        } else if (item.security === 'medium') {
+          security = chalk.yellow(security);
+          server = chalk.yellow(server);
+        } else if (item.security === 'low') {
+          security = chalk.cyan(security);
+          server = chalk.cyan(server);
+        }
+
+        table.push([server, host, secret, description, security]);
+      });
+
+      logger.info('Client Server Configurations:');
+      console.log(table.toString());
+      
+    } else if (type === 'server') {
+      const serverConfig = getServerConfig();
+      
+      if (options.json) {
+        console.log(JSON.stringify(serverConfig, null, 2));
+        return;
+      }
+
+      // Create table for server config
+      const table = new Table({
+        head: ['Key', 'Value', 'Default', 'Source', 'Updated', 'Security'],
+        style: { head: ['bold', 'white'] },
+        wordWrap: true,
+        colWidths: [20, 30, 15, 15, 25, 10],
+      });
+
+      serverConfig.forEach((item) => {
+        let key = item.key;
+        let value = typeof item.value === 'object' ? JSON.stringify(item.value) : String(item.value || '');
+        let def = typeof item.defaultValue === 'object' ? JSON.stringify(item.defaultValue) : String(item.defaultValue !== undefined ? item.defaultValue : '-');
+        let source = item.source;
+        let updated = item.updatedAt === 'N/A' ? '-' : new Date(item.updatedAt).toLocaleString();
+        let security = item.security || 'unknown';
+
+        // Color coding
+        if (item.source === 'Environment') {
+          source = chalk.cyan(source);
+          key = chalk.cyan(key);
+        } else if (item.isModified) {
+          source = chalk.yellow(source);
+          key = chalk.yellow(key);
+        }
+
+        if (['critical', 'high'].includes(item.security)) {
+          security = chalk.red(security);
+          if (item.security === 'critical') value = '********';
+        }
+
+        table.push([key, value, def, source, updated, security]);
+      });
+
+      logger.info('Server Configuration:');
+      console.log(table.toString());
+
+    } else {
+      // Default behavior - show all config (backward compatibility)
+      const detailed = getDetailedConfig();
+
+      // Sorting Logic
+      detailed.sort((a, b) => {
+        if (options.sort === 'key') return a.key.localeCompare(b.key);
+        if (options.sort === 'modified') return (b.updatedAt || '').localeCompare(a.updatedAt || '');
+        if (options.sort === 'source') return a.source.localeCompare(b.source);
+        if (options.sort === 'security') {
+          const levels = { critical: 0, high: 1, medium: 2, low: 3, unknown: 4 };
+          return (levels[a.security] || 4) - (levels[b.security] || 4);
+        }
+        return 0;
+      });
+
+      if (options.json) {
+        console.log(JSON.stringify(detailed, null, 2));
+        return;
+      }
+
+      // Table Setup (existing code)
+      const table = new Table({
+        head: ['Key', 'Value', 'Default', 'Source', 'Updated', 'Sec'],
+        style: { head: ['bold', 'white'] },
+        wordWrap: true,
+        colWidths: [20, 30, 15, 15, 25, 10],
+      });
+
+      let stats = { total: 0, modified: 0, env: 0, security: 0 };
+
+      detailed.forEach((item) => {
+        stats.total++;
+        if (item.source === 'Environment') stats.env++;
+        if (item.isModified) stats.modified++;
+        if (['critical', 'high'].includes(item.security)) stats.security++;
+
+        let key = item.key;
+        let value = typeof item.value === 'object' ? JSON.stringify(item.value) : String(item.value || '');
+        let def = typeof item.defaultValue === 'object' ? JSON.stringify(item.defaultValue) : String(item.defaultValue !== undefined ? item.defaultValue : '-');
+        let source = item.source;
+        let updated = item.updatedAt === 'N/A' ? '-' : new Date(item.updatedAt).toLocaleString();
+        let sec = item.security || 'unknown';
+
+        // Color Coding
+        if (item.source === 'Environment') {
+          source = chalk.cyan(source);
+          key = chalk.cyan(key);
+        } else if (item.isModified) {
+          source = chalk.yellow(source);
+          key = chalk.yellow(key);
+        }
+
+        if (['critical', 'high'].includes(item.security)) {
+          sec = chalk.red(sec);
+          if (item.security === 'critical') value = '********';
+        }
+
+        table.push([key, value, def, source, updated, sec]);
+      });
+
+      logger.info('Current Configuration:');
+      console.log(table.toString());
+
+      // Summary Statistics
+      console.log('\nSummary Statistics:');
+      console.log(
+        `Total: ${stats.total} | Modified: ${chalk.yellow(stats.modified)} | Env Overrides: ${chalk.cyan(
+          stats.env
+        )} | Security Critical: ${chalk.red(stats.security)}`
+      );
+
+      // Help Section
+      console.log('\nLegend:');
+      console.log(
+        `${chalk.cyan('Cyan')}: Environment Override | ${chalk.yellow(
+          'Yellow'
+        )}: Modified/File | ${chalk.red('Red')}: High Security`
+      );
+    }
   });
 
 configCommand
@@ -188,6 +360,14 @@ program
   .description('Start the server in background (daemon mode) using PM2 if available')
   .option('-p, --port <port>', 'Port to listen on')
   .action((options) => {
+    // Validate mandatory configuration before starting
+    const missingParams = validateMandatoryConfig();
+    if (missingParams.length > 0) {
+      const errorMessage = getMissingConfigMessage(missingParams);
+      logger.error(errorMessage);
+      process.exit(1);
+    }
+
     // Try to use PM2 first
     try {
       // Check if PM2 is available via API
@@ -335,31 +515,19 @@ program
   .description('Start the server to listen for commands')
   .option('-p, --port <port>', 'Port to listen on')
   .action((options) => {
+    // Validate mandatory configuration before starting
+    const missingParams = validateMandatoryConfig();
+    if (missingParams.length > 0) {
+      const errorMessage = getMissingConfigMessage(missingParams);
+      logger.error(errorMessage);
+      process.exit(1);
+    }
+
     const port = options.port || getConfig('server_port') || process.env.SERVER_PORT || 3000;
     const secret = getConfig('secret_key') || process.env.SECRET_KEY;
 
-    if (!secret) {
-      logger.warn(
-        'Warning: No "secret_key" set in config or SECRET_KEY env var. Communication might be insecure or fail if client requires it.'
-      );
-      logger.info('Run "redep config set secret_key <your-secret>" or set SECRET_KEY env var.');
-    }
-
     const workingDir = getConfig('working_dir') || process.env.WORKING_DIR;
-    if (!workingDir) {
-      logger.error(
-        'Error: "working_dir" is not set. Please set it using "redep config set working_dir <path>" or WORKING_DIR env var.'
-      );
-      process.exit(1);
-    }
-
     const deploymentCommand = getConfig('deployment_command') || process.env.DEPLOYMENT_COMMAND;
-    if (!deploymentCommand) {
-      logger.error(
-        'Error: "deployment_command" is not set. Please set it using "redep config set deployment_command <cmd>" or DEPLOYMENT_COMMAND env var.'
-      );
-      process.exit(1);
-    }
 
     startServer(port, secret, workingDir, deploymentCommand);
   });

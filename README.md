@@ -49,6 +49,8 @@ The server is the agent that runs on your remote machine and executes the deploy
 
 #### Option A: Using Docker (Recommended)
 
+**Linux / macOS (Bash):**
+
 ```bash
 docker run -d \
   --name redep-server \
@@ -59,6 +61,21 @@ docker run -d \
   -e SECRET_KEY=your-super-secret-key \
   -e WORKING_DIR=/app/workspace \
   -e DEPLOYMENT_COMMAND="docker compose pull && docker compose up -d" \
+  nafies1/redep:latest
+```
+
+**Windows (PowerShell):**
+
+```powershell
+docker run -d `
+  --name redep-server `
+  --restart always `
+  -p 3000:3000 `
+  -v /var/run/docker.sock:/var/run/docker.sock `
+  -v ${PWD}:/app/workspace `
+  -e SECRET_KEY=your-super-secret-key `
+  -e WORKING_DIR=/app/workspace `
+  -e DEPLOYMENT_COMMAND="docker compose pull && docker compose up -d" `
   nafies1/redep:latest
 ```
 
@@ -94,6 +111,7 @@ redep deploy prod
 ```
 
 You will see:
+
 ```text
 (INFO) Connecting to http://your-server-ip:3000...
 (SUCCESS) Connected to server. requesting deployment...
@@ -108,6 +126,7 @@ You will see:
 ## ⚙️ Configuration
 
 `redep` uses a hierarchical configuration system:
+
 1.  **Environment Variables** (Highest Priority)
 2.  **Config File** (Managed via CLI)
 
@@ -118,23 +137,27 @@ See [Advanced Configuration](docs/ADVANCED_CONFIG.md) for full details on enviro
 ## 💻 Development Setup
 
 ### Prerequisites
+
 - Node.js >= 18
 - Docker (for testing container builds)
 
 ### Local Development
 
 1.  **Clone the repository:**
+
     ```bash
     git clone https://github.com/nafies1/redep.git
     cd redep
     ```
 
 2.  **Install dependencies:**
+
     ```bash
     npm install
     ```
 
 3.  **Link globally (optional):**
+
     ```bash
     npm link
     ```

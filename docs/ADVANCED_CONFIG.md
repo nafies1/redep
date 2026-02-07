@@ -26,20 +26,28 @@ The CLI `redep start` command automatically attempts to use PM2 if installed.
 
 Clients can be configured to talk to multiple servers (e.g., `dev`, `staging`, `prod`).
 
-```json
-{
-  "servers": {
-    "prod": {
-      "host": "https://deploy.example.com",
-      "secret_key": "prod-secret"
-    },
-    "staging": {
-      "host": "http://10.0.0.5:3000",
-      "secret_key": "staging-secret"
-    }
-  }
-}
+### Client Server Configuration Table
+
+| Servers   | Host                          | Secret Key       | Description                         |
+| --------- | ----------------------------- | ---------------- | ----------------------------------- |
+| `prod`    | `https://deploy.example.com`  | `prod-secret`    | Production server with HTTPS        |
+| `staging` | `http://10.0.0.5:3000`        | `staging-secret` | Staging server on internal network  |
+| `uat`     | `http://uat.company.com:3000` | `uat-secret`     | User Acceptance Testing environment |
+| `dev`     | `http://localhost:3000`       | `dev-secret`     | Local development server            |
+
+### Viewing Client Configuration
+
+Use the new `redep config list client` command to display your client configurations in a structured table format:
+
+```bash
+# Display all client server configurations
+redep config list client
+
+# Display with custom sorting
+redep config list client --sort host
 ```
+
+This will show a formatted table with columns for Server Name, Host URL, and Security Level, making it easy to review all your configured deployment targets.
 
 ### Managing Servers via CLI
 
@@ -50,6 +58,51 @@ redep config set servers.dev.secret_key mysecret
 
 # Get a server config
 redep config get servers.dev
+```
+
+### Viewing Configuration with New List Commands
+
+The enhanced `redep config list` command now supports viewing client and server configurations separately:
+
+```bash
+# View all client server configurations
+redep config list client
+
+# View server configuration only
+redep config list server
+
+# View all configurations (backward compatibility)
+redep config list
+
+# View with JSON output
+redep config list client --json
+redep config list server --json
+```
+
+**Client Configuration Table Example:**
+
+```
+┌─────────┬──────────────────────────────┬─────────────┬─────────────────────────────────────┬──────────┐
+│ Server  │ Host                         │ Secret Key  │ Description                         │ Security │
+├─────────┼──────────────────────────────┼─────────────┼─────────────────────────────────────┼──────────┤
+│ prod    │ https://deploy.example.com   │ ********    │ Production environment with HTTPS   │ high     │
+│ staging │ http://10.0.0.5:3000         │ ********    │ Staging environment for testing     │ medium   │
+│ uat     │ http://uat.company.com:3000  │ ********    │ User Acceptance Testing environment │ medium   │
+│ dev     │ http://localhost:3000        │ ********    │ Local development server            │ low      │
+└─────────┴──────────────────────────────┴─────────────┴─────────────────────────────────────┴──────────┘
+```
+
+**Server Configuration Table Example:**
+
+```
+┌────────────────────┬──────────────────────────────┬───────────────┬───────────────┬─────────────────────────┬──────────┐
+│ Key                │ Value                        │ Default       │ Source        │ Updated                 │ Security │
+├────────────────────┼──────────────────────────────┼───────────────┼───────────────┼─────────────────────────┼──────────┤
+│ server_port        │ 3000                         │ 3000          │ Environment   │ 2026-01-22 14:28:14     │ low      │
+│ secret_key         │ ********                     │ null          │ File          │ 2026-01-22 14:30:22     │ critical │
+│ working_dir        │ /app/workspace               │ null          │ Environment   │ -                       │ medium   │
+│ deployment_command │ docker compose up -d         │ null          │ File          │ -                       │ high     │
+└────────────────────┴──────────────────────────────┴───────────────┴───────────────┴─────────────────────────┴──────────┘
 ```
 
 ## Security Best Practices

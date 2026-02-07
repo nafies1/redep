@@ -14,6 +14,8 @@ docker pull nafies1/redep:latest
 
 To run the server, you need to provide a **Secret Key** and mount the **Docker Socket** (so `redep` can execute Docker commands on the host).
 
+#### Linux / macOS (Bash)
+
 ```bash
 docker run -d \
   --name redep-server \
@@ -24,6 +26,36 @@ docker run -d \
   -e SECRET_KEY=your-super-secret-key \
   -e WORKING_DIR=/app/workspace \
   -e DEPLOYMENT_COMMAND="docker compose up -d" \
+  nafies1/redep:latest
+```
+
+#### Windows (PowerShell)
+
+```powershell
+docker run -d `
+  --name redep-server `
+  --restart always `
+  -p 3000:3000 `
+  -v /var/run/docker.sock:/var/run/docker.sock `
+  -v ${PWD}/workspace:/app/workspace `
+  -e SECRET_KEY=your-super-secret-key `
+  -e WORKING_DIR=/app/workspace `
+  -e DEPLOYMENT_COMMAND="docker compose up -d" `
+  nafies1/redep:latest
+```
+
+#### Windows (Command Prompt)
+
+```cmd
+docker run -d ^
+  --name redep-server ^
+  --restart always ^
+  -p 3000:3000 ^
+  -v /var/run/docker.sock:/var/run/docker.sock ^
+  -v %cd%/workspace:/app/workspace ^
+  -e SECRET_KEY=your-super-secret-key ^
+  -e WORKING_DIR=/app/workspace ^
+  -e DEPLOYMENT_COMMAND="docker compose up -d" ^
   nafies1/redep:latest
 ```
 
