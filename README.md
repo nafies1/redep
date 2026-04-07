@@ -121,6 +121,26 @@ You will see:
 (SUCCESS) [10:00:06 AM] Status: Deployment Completed
 ```
 
+### 4. Reverse Proxy Management
+
+`redep` now includes a built-in PM2-managed reverse proxy, allowing you to seamlessly route traffic with zero-downtime reloads.
+
+```bash
+# Add a new proxy instance mapping port 8080 to an upstream target
+redep proxy add myproxy 8080 http://example.com
+
+# Start the reverse proxy daemon in the background (managed by PM2)
+redep proxy start
+
+# List all active proxies
+redep proxy list
+
+# Smoothly reload proxy configurations with zero downtime
+redep proxy reload
+```
+
+Every proxy instance automatically exposes a health check endpoint at `/health`.
+
 ---
 
 ## ⚙️ Configuration

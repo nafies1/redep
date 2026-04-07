@@ -8,7 +8,7 @@ import inquirer from 'inquirer';
 import Table from 'cli-table3';
 import chalk from 'chalk';
 import { logger } from '../lib/logger.js';
-import { getConfig, setConfig, getAllConfig, clearConfig, getDetailedConfig, getClientConfig, getServerConfig, validateMandatoryConfig, getMissingConfigMessage } from '../lib/config.js';
+import { getConfig, setConfig, getAllConfig, clearConfig, getDetailedConfig, getClientConfig, getServerConfig, validateMandatoryConfig, getMissingConfigMessage, getProxies, addProxy, updateProxy, removeProxy } from '../lib/config.js';
 import { startServer } from '../lib/server/index.js';
 import { deploy } from '../lib/client/index.js';
 import pkg from '../package.json' with { type: 'json' };
@@ -570,5 +570,86 @@ program
       process.exit(1);
     }
   });
+
+// Proxy Command
+const proxyCommand = new Command('proxy').description('Manage reverse proxy instances');
+
+proxyCommand
+  .command('add <name> <port> <target>')
+  .description('Add a new proxy instance')
+  .action((name, port, target) => {
+    addProxy(name, parseInt(port, 10), target);
+    logger.success(`Proxy '${name}' added. Run "redep proxy reload" to apply if running.`);
+  });
+
+proxyCommand
+  .command('update <name>')
+  .description('Update an existing proxy instance')
+  .option('-p, --port <port>', 'New port')
+  .option('-t, --target <target>', 'New target URL')
+  .action((name, options) => {
+    updateProxy(name, { port: options.port ? parseInt(options.port, 10) : undefined, target: options.target });
+    logger.success(`Proxy '${name}' updated. Run "redep proxy reload" to apply if running.`);
+  });
+
+proxyCommand
+  .command('remove <name>')
+  .description('Remove a proxy instance')
+  .action((name) => {
+    removeProxy(name);
+    logger.success(`Proxy '${name}' removed. Run "redep proxy reload" to apply if running.`);
+  });
+
+proxyCommand
+  .command('list')
+  .description('List all proxy instances')
+  .action(() => {
+    const proxies = getProxies();
+    const table = new Table({
+      head: ['Name', 'Port', 'Target', 'Registered'],
+      style: { head: ['bold', 'white'] }
+    });
+    for (const [name, config] of Object.entries(proxies)) {
+      table.push([name, config.port, config.target, new Date(config.registeredAt).toLocaleString()]);
+    }
+    logger.info('Registered Proxies:');
+    console.log(table.toString());
+  });
+
+proxyCommand
+  .command('start')
+  .description('Start the proxy server in background using PM2')
+  .action(() => {
+    const scriptPath = new URL('../proxy-entry.js', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+    const pm2 = spawn('pm2', ['start', scriptPath, '--name', 'redep-proxy'], { stdio: 'inherit', shell: true });
+    pm2.on('close', (code) => {
+      if (code === 0) logger.success('Proxy server started in background using PM2');
+      else logger.error('Failed to start proxy server using PM2');
+    });
+  });
+
+proxyCommand
+  .command('stop')
+  .description('Stop the proxy server')
+  .action(() => {
+    const pm2 = spawn('pm2', ['stop', 'redep-proxy'], { stdio: 'inherit', shell: true });
+    pm2.on('close', (code) => {
+      if (code === 0) logger.success('Proxy server stopped');
+      else logger.error('Failed to stop proxy server using PM2');
+    });
+  });
+
+proxyCommand
+  .command('reload')
+  .description('Gracefully reload the proxy server under PM2')
+  .action(() => {
+    const pm2 = spawn('pm2', ['reload', 'redep-proxy'], { stdio: 'inherit', shell: true });
+    pm2.on('close', (code) => {
+      if (code === 0) logger.success('Proxy server gracefully reloaded');
+      else logger.error('Failed to reload proxy server. Is it running?');
+    });
+  });
+
+program.addCommand(proxyCommand);
 
 program.parse(process.argv);
